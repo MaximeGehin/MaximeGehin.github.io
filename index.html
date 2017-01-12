@@ -1,0 +1,961 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<script src="https://d3js.org/d3.v3.min.js"></script>
+	<script src="https://d3js.org/d3-queue.v3.min.js"></script>
+	<script src="https://unpkg.com/leaflet@1.0.2/dist/leaflet.js"></script>	
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.2/dist/leaflet.css" />	
+	
+	<!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+	<!-- Optional theme -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+	<!-- Latest compiled and minified JavaScript -->
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+	
+    <title>ProjetDataviz</title>
+    <script type="text/javascript">
+        //<!--
+                
+				function change_onglet(name)
+                {
+                        document.getElementById('onglet_'+anc_onglet).className = 'onglet_0 onglet';
+                        document.getElementById('onglet_'+name).className = 'onglet_1 onglet';
+                        document.getElementById('contenu_onglet_'+anc_onglet).style.display = 'none';
+                        document.getElementById('contenu_onglet_'+name).style.display = 'block';
+                        anc_onglet = name;
+      
+					  //if we don't do that, the map don't launch properly
+					  map.invalidateSize(true);
+					  
+					  // Hide the slidder for line chart
+					  if(name == 'map'){
+					   document.getElementById('slider').style.visibility="visible";
+					   document.getElementById('time').style.visibility="visible";
+					   document.getElementById('lineChartLegend').style.visibility="hidden";
+					   document.getElementById('legendLineChartgMonth').style.visibility="visible";
+					   document.getElementById('legendLineChartgYears').style.visibility="visible";
+					  }
+					  else{
+					   document.getElementById('slider').style.visibility="hidden";
+					   document.getElementById('time').style.visibility="hidden";
+					   document.getElementById('lineChartLegend').style.visibility="visible";
+					   document.getElementById('legendLineChartgMonth').style.visibility="hidden";
+					   document.getElementById('legendLineChartgYears').style.visibility="hidden";
+					  }
+                }
+
+        //-->
+        </script>
+    <style type="text/css">
+        /*.onglet
+        {
+                display:inline-block;
+                margin-left:3px;
+                margin-right:3px;
+                padding:3px;
+                border:1px solid black;
+                cursor:pointer;
+        }
+        .onglet_0
+        {
+                background:#bbbbbb;
+                border-bottom:1px solid black;
+        }
+        .onglet_1
+        {
+                background:#dddddd;
+                border-bottom:0px solid black;
+                padding-bottom:4px;
+        }*/
+        .contenu_onglet
+        {
+                background-color:#E6E6FA;
+                border:1px solid black;
+                margin-top:-1px;
+                padding:5px;
+                display:none;
+				
+				margin-left: 5px;
+        }
+        ul
+        {
+                margin-top:0px;
+                margin-bottom:0px;
+                margin-left:-10px
+        }
+        h1
+        {
+                margin:0px;
+                padding:0px;
+        }
+		
+		#contenu_onglet_line_chart
+		{ 	position: relative;
+			height: 800px;
+			width: 68%;
+			float:left;
+		}
+		
+		.line {
+		  fill: none;
+		  stroke: steelblue;
+		  stroke-width: 3px;
+		}
+		
+		.axis
+		{
+			fill: none;
+			stroke: grey;
+			stroke-width: 1;
+			shape-rendering: crispEdges;
+			font-size: x-small
+		}
+		
+		#contenu_onglet_map 
+		{ 	
+			position: relative;
+			height: 800px;
+			width: 65%;
+			float:left;
+		}
+		
+		#mapid 
+		{ 	
+			float: left;
+			height: 800px;
+			width: 100%;
+		}
+		#legend
+		{
+			float: right;
+			height: 800px;
+			width: 30%;
+			background:#E6E6FA;
+			border:1px solid black;
+			padding-top: 20px;
+			padding-left: 30px;
+			margin-right: 5px;
+			line-height : 40px;
+		}
+		
+		#legend label{
+			width: 80px;
+		}
+		
+		#legend input{
+			margin-left: 5px;
+		}
+		
+		#slider
+		{
+			float: left;
+			width: 120px;
+			margin-bottom : 10px;
+		}
+		
+		.mapHidden {
+			display: none;
+		}
+		div.mapTooltip {
+			color: #222;
+			background-color: #fff;
+			padding: .5em;
+			text-shadow: #f5f5f5 0 1px 0;
+			border-radius: 2px;
+			opacity: 0.9;
+			position: absolute;
+			z-index: 999;
+		}
+			
+        </style>
+</head>
+<body>
+
+	 <div class="systeme_onglets">
+        <div class="onglets">
+		    <ul class="nav nav-tabs">
+			  <li><a href="#"><span class="onglet_0 onglet" id="onglet_line_chart" onclick="javascript:change_onglet('line_chart');">Line Chart</span></a></li>
+			  <li><a href="#"><span class="onglet_0 onglet" id="onglet_map" onclick="javascript:change_onglet('map');">Map</span></a></li>
+			</ul>
+        </div>
+        <div class="contenu_onglets">
+            <div class="contenu_onglet" id="contenu_onglet_line_chart">
+                <div id="linechartid">
+				</div>
+            </div>
+            <div class="contenu_onglet" id="contenu_onglet_map">
+				<div id="mapid">
+				</div>
+				
+            </div>				
+        </div>
+		<div id="legend">
+			<div>
+				<input id="slider" type="range" value="1" min="0" max="12" step="1" />
+				<span id="time">time</span>
+			</div>
+		</div>	
+    </div>
+    <script type="text/javascript">
+		//onglet init
+		var anc_onglet = 'line_chart';
+		/******************************************PARTIE DATA **************************************/
+		//convert microg/m3 into ppm
+		var toxicoConverter = {};
+		
+		//data
+		var dataPollution = {};
+		
+		//bind the station name with their indice in the data
+		var bindStationIndice = {};
+		
+		var currentPolluant;
+		var currentGranularity;
+		var currentTime;
+		var currentStation;
+		
+		//no sure if i can sort them in another way...
+		var orderedTime = {};
+		
+		//x axis for the main line chart
+		var xMainLine;
+		var lineMain;
+		var lineLegendMonth;
+		var lineLegendYears;
+		
+		var xMonthLegend;
+		var yMonthLegend;
+		var xYearsLegend;
+		var yYearsLegend;
+		
+		//initialise map
+		var map = L.map('mapid').setView([45.65, 4.90], 10);
+		var tooltip = d3.select("body").append('div')
+		.attr('class', 'mapHidden mapTooltip');
+		
+		// read all files
+		d3.queue() 
+			.defer(d3.csv, "Data/toxicoConversion.txt")
+			.defer(d3.csv, "Data/gpsStation.txt")
+			.defer(d3.csv, "Data/Rural_Annees.txt")
+			.defer(d3.csv, "Data/Rural_Mois.txt")
+			.defer(d3.csv, "Data/Urbain_Annees.txt")
+			.defer(d3.csv, "Data/Urbain_Mois.txt")
+			.await(processData);
+
+		function processData(error,dataConvert,dataGps,ruralAnnee,ruralMois,urbainAnnee,urbainMois) {
+			for(var i =0; i < dataConvert.length; i++) {
+				toxicoConverter[dataConvert[i].polluant] = {"convert":dataConvert[i].converter, "LC50":dataConvert[i].LC50}
+			} 
+			
+			//put all stations and their gps coordinate into data, also bind station name to an indice
+			dataPollution["Stations"] = [];
+			for(var i =0; i < dataGps.length; i++) {				
+				dataPollution["Stations"].push({"name":dataGps[i].Station,"coordinates":[dataGps[i].Longitude,dataGps[i].Latitude], "Polluants":{}});
+				bindStationIndice[dataGps[i].Station] = i;
+			}
+			
+			//gather all file data
+			gatherData(dataPollution, ruralAnnee, "years", "rural", bindStationIndice);
+			gatherData(dataPollution, ruralMois, "month", "rural", bindStationIndice);
+			gatherData(dataPollution, urbainAnnee, "years", "urbain", bindStationIndice);
+			gatherData(dataPollution, urbainMois, "month", "urbain", bindStationIndice);
+			
+			orderedTime["month"] = Object.keys(ruralMois[0]).filter(function(item) {
+				  return item.match("[0-9]") != null; //we need columns with a number      
+			});
+			orderedTime["years"] = Object.keys(ruralAnnee[0]).filter(function(item) {
+				  return item.match("[0-9]") != null; //we need columns with a number      
+			});
+			
+			//Pour toutes les stations
+			for(var i = 0; i < dataPollution.Stations.length; i++) {
+				//pour tous les polluants normalisables
+				var years = {};
+				var month = {};
+				for(var polluant in toxicoConverter) {
+					if(typeof dataPollution.Stations[i].Polluants[polluant] != "undefined"){
+						//Month
+						if(typeof dataPollution.Stations[i].Polluants[polluant]["month"] != "undefined") {
+							for(var m = 0; m < orderedTime["month"].length; m++) {
+								var data = dataPollution.Stations[i].Polluants[polluant]["month"][orderedTime["month"][m]];
+								if(isNaN(data)) {
+									continue;
+								} else {
+									if(typeof month[orderedTime["month"][m]] == "undefined") {
+										month[orderedTime["month"][m]] = {"ponderation":(1/toxicoConverter[polluant].LC50) ,"data":(data / toxicoConverter[polluant].LC50)};
+									} else {
+										month[orderedTime["month"][m]].data += (data / toxicoConverter[polluant].LC50);
+										month[orderedTime["month"][m]].ponderation += (1/toxicoConverter[polluant].LC50);
+									}
+								}
+							}
+						}
+						//Years					
+						if(typeof dataPollution.Stations[i].Polluants[polluant]["years"] != "undefined") {
+							for(var m = 0; m < orderedTime["years"].length; m++) {
+								var data = dataPollution.Stations[i].Polluants[polluant]["years"][orderedTime["years"][m]];
+								if(isNaN(data)) {
+									continue;
+								} else {
+									if(typeof years[orderedTime["years"][m]] == "undefined") {
+										years[orderedTime["years"][m]] = {"ponderation":(1/toxicoConverter[polluant].LC50) ,"data":(data / toxicoConverter[polluant].LC50)};
+									} else {
+										years[orderedTime["years"][m]].data += (data / toxicoConverter[polluant].LC50);
+										years[orderedTime["years"][m]].ponderation += (1/toxicoConverter[polluant].LC50);
+									}
+								}
+							}					
+						}					
+					}
+				}
+				console.log(dataPollution.Stations[i].name);
+				console.log(month);
+				var bmonth = 0;
+				var byears = 0;
+				for(var time in month) {
+					month[time] = (month[time].data / month[time].ponderation);
+					bmonth=1;
+				}
+				for(var time in years) {
+					years[time] = (years[time].data / years[time].ponderation);
+					byears = 1;
+				}
+				dataPollution.Stations[i].Polluants["Tous"] = {"Unitée":"ppm pondérées"};
+				if(byears) {dataPollution.Stations[i].Polluants["Tous"]["years"] = years; }
+				if(bmonth) {dataPollution.Stations[i].Polluants["Tous"]["month"] = month; }
+
+			}
+			console.log("Data object : ");
+			console.log(dataPollution);
+			
+			//build map
+			computeLegend();
+			computeMap();
+			computeLineChart();
+			
+			onchange();
+			//initialisation for onglets
+			change_onglet(anc_onglet);			
+		}
+		//take the data object, the file to read, the time granilarity, the location and compute the data into the data object
+		function gatherData(dataPollution, csv, granularite, ruralOrUrbain, bindStationIndice) {
+		
+			var listKey = Object.keys(csv[0]).filter(function(item) {
+				  return item.match("[0-9]") != null; //we need columns with a number      
+			});
+			//for every line in the csv file
+			for(var i = 0; i < csv.length; i++) {
+				var k = bindStationIndice[csv[i].Station]; //get the indice of the station
+				dataPollution.Stations[k].ruralOrUrbain = ruralOrUrbain;
+
+				//get all pollution record
+				var tempData = {};		
+
+				var converter = 1;
+				var unit = csv[i].Unité;
+				//if we can convert the polluant into ppm, we do it
+				if(typeof toxicoConverter[csv[i].Polluant] != "undefined") {
+					unit = "ppm";
+					converter = toxicoConverter[csv[i].Polluant].convert;
+				}
+				for(var j = 0; j < listKey.length; j++) {
+					tempData[listKey[j]] = csv[i][listKey[j]] * converter;
+				}
+				if(typeof dataPollution.Stations[k].Polluants[csv[i].Polluant] == "undefined") {
+					dataPollution.Stations[k].Polluants[csv[i].Polluant] = {[granularite]: tempData, "Unitée":unit};
+				} else {
+					dataPollution.Stations[k].Polluants[csv[i].Polluant][granularite] = tempData;
+				}
+			}		
+		}
+
+		/******************************************PARTIE LINE CHART *******************************/
+				
+		function computeLineChart() {
+
+			var margin = {top: 20, right: 30, bottom: 80, left: 40};
+			var svg = d3.select("#linechartid").append("svg")
+				.attr("width", 900)
+				.attr("height", 800);
+				
+			var width = +svg.attr("width") - margin.left - margin.right;
+			var height = +svg.attr("height") - margin.top - margin.bottom;
+			
+			var y = d3.scale.linear()
+			.range([height, 0]);
+			var yAxis = d3.svg.axis()
+			.scale(y)
+			.orient("left");
+			y.domain([0,100]);
+			
+			xMainLine = d3.scale.ordinal().rangePoints([0, width]);
+			xMainLine.domain(orderedTime[currentGranularity]);
+			
+			var xAxis = d3.svg.axis().scale(xMainLine)
+				.orient("bottom");
+			
+			var color = d3.scale.category20();			
+			
+			var g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+			
+			g.append("g")
+				.attr("class", "x axis")
+				.attr("id", "mainLineXAxis")
+				.attr("width", width)
+				.attr("height", height)
+				.attr("transform", "translate(0," + (height) + ")")
+				.call(xAxis);
+			
+			g.append("g")
+			.attr("class", "y axis")
+			.call(yAxis)
+			
+			//entrée : dataPollution.Station[i].Polluant.currentPolluant.currentGranularity
+			var line = d3.svg.line()
+			.defined(function(d) { return !isNaN(d.value); })
+			.x(function(d) { return xMainLine(d.date); })
+			.y(function(d) { return y(d.value); })
+			 .interpolate("linear");
+			
+			lineMain = line;
+			
+			var station = g.selectAll(".station")
+			.data(dataPollution.Stations)
+			.enter().append("g")
+				.attr("class", "station");
+				
+			station.append("path")
+			.attr("class", "line")
+			.attr("d", function(d) {
+				if(typeof d.Polluants[currentPolluant] != "undefined") {			
+					if(typeof d.Polluants[currentPolluant][currentGranularity] != "undefined") {
+						var array = [];
+						var data = d.Polluants[currentPolluant][currentGranularity];
+						for(v in data) {
+							array.push({"date":v, "value":Math.round(data[v])});
+						}
+						return line(array);
+					}
+				}
+
+			 })
+			.style("stroke", function(d,i) { return color(i); })
+			.on('mouseover', function(d,i) {
+				opacityGestion(d,i);
+				var mouse = [0, 0];
+				mouse = d3.mouse(this);
+				/*var text = currentPolluant + ": " + getValuePolluant(d, currentPolluant, currentGranularity, currentTime)
+					+ d.Polluants[currentPolluant].Unitée; */
+				tooltip.classed('mapHidden', false)
+				.attr('style', 'left:' + (d3.event.pageX + 15) +
+					  'px; top:' + (d3.event.pageY - 35) + 'px')
+				.html("<div>" + d.name + "<\div>");
+			})
+			.on('mouseout', function(d) {
+				tooltip.classed('mapHidden', true);
+				d3.select("#linechartid").selectAll(".line")
+					.style("stroke-width",3)
+					.style("opacity",1);					
+			 })
+			 
+			var legend = d3.select("#legend").select("svg").append("g")
+			.attr("id", "lineChartLegend")
+			.selectAll(".legendLineChart")
+				.data(dataPollution.Stations)
+				.enter().append("g")
+				.attr("class", "legendLineChart")
+				.attr("transform", function(d, i) { 
+				return "translate(0," + i * 27 + ")"; 
+				});
+      
+			// draw legend colored rectangles
+			legend.append("rect")
+			  .attr("x", 5)
+			  .attr("width", 25)
+			  .attr("height", 25)
+			  .style("fill", function(d, i){ return color(i); })
+			  .on('mouseover', function(d,i) {
+				opacityGestion(d,i);
+			   })
+			  .on('mouseout', function(d) {
+				tooltip.classed('mapHidden', true);
+				d3.select("#linechartid").selectAll(".line")
+					.style("stroke-width",3)
+					.style("opacity",1);					
+				});
+			// draw legend text
+			legend.append("text")
+			  .attr("x", 35)
+			  .attr("y", 9)
+			  .attr("dy", ".35em")
+			  .style("text-anchor", "start")
+			  .text(function(d) { return d.name;})
+			  .on('mouseover', function(d,i) {
+				opacityGestion(d,i);
+			   })
+			  .on('mouseout', function(d) {
+				tooltip.classed('mapHidden', true);
+				d3.select("#linechartid").selectAll(".line")
+					.style("stroke-width",3)
+					.style("opacity",1);					
+			 })
+			 
+			 function opacityGestion(d,j) {
+				d3.select("#linechartid").selectAll(".line")
+				.each(function (d, i) {
+					if (i != j) {
+						d3.select(this).style("stroke-width",2)
+						d3.select(this).style("opacity",0.5);
+					} else {
+						d3.select(this).style("stroke-width",6).style("opacity",1);
+					}
+				})
+			}
+			g.append("svg:line")
+			.attr("id","LineChartTreshold")
+			.attr("x1", xMainLine(0))
+			.attr("x2", width)
+			.attr("y1", y(80))
+			.attr("y2", y(80))
+			.style("stroke", "rgb(255, 0, 0)")
+			.style("visibility","hidden");
+
+			 drawLine();
+		}
+		 /*****************************************PARTIE MAP **************************************/
+		 
+		function computeMap() {
+			L.svg().addTo(map)
+			var svg = d3.select("#contenu_onglet_map").select("svg"),
+			g = svg.select("g");
+			map.on("move", mapUpdate);
+			
+			//initialize circles
+			var circles = g.selectAll("circle")
+				.data(dataPollution.Stations)
+				.enter()
+				.append("circle")
+				.style("fill", function(d) { return "red"; })
+				.style("fill-opacity",0.5)
+				.style("stroke", "#fff")
+				.style("stroke-width", "0.5px")
+				.attr("pointer-events","visible")
+				.on('mouseover', function(d) {
+					d3.select(this).style("fill-opacity",0.8);    
+					var mouse = [0, 0];
+					mouse = d3.mouse(this);
+					var text = currentPolluant + ": " + getValuePolluant(d, currentPolluant, currentGranularity, currentTime)
+						+ d.Polluants[currentPolluant].Unitée;
+					console.log(text);
+					tooltip.classed('mapHidden', false)
+					.attr('style', 'left:' + (d3.event.pageX + 15) +
+						  'px; top:' + (d3.event.pageY - 35) + 'px')
+					.html("<div>" + d.name + "<\div>" + "<div>" + text + "<\div>");
+				})
+				.on('mouseout', function(d) {
+					tooltip.classed('mapHidden', true);
+					d3.select(this).style("fill-opacity",0.5);    
+				 })
+				 .on('click', function(d) {
+					drawLineChartLegend(d);
+				 });
+			
+			mapUpdate();
+			function mapUpdate() {
+				console.log("mapUpdate");
+				circles.attr("transform",
+				function(d) { 
+					return "translate("+ 
+						map.latLngToLayerPoint(d.coordinates).x +","+ 
+						map.latLngToLayerPoint(d.coordinates).y +")";
+					}
+				)
+			}
+			L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+				attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+			}).addTo(map);
+		}
+		
+		/********Partie Legende ******/
+		function computeLegend() {
+			/**** Legend&Selection part ****/
+			
+			//Liste déroulante
+			var select = d3.select('#legend')
+			  .append('select')
+				.attr('class','select')
+				.on('change',onchange)
+			
+			var options = select
+			  .selectAll('option')
+				.data(Object.keys(toxicoConverter)).enter()
+				.append('option')
+					.text(function (d) { return d; });
+			options = select	
+					.append('option')
+						.text('Tous')
+						
+			options = select	
+					.append('option')
+						.text('Particules_PM10')
+			
+			//radio button
+			var form = d3.select("#legend").append("form");
+			labels = form.selectAll("label")
+				.data(["month","years"])
+				.enter()
+				.append("label")
+				.text(function(d) {return d;})
+				.insert("input")
+				.attr({
+					type: "radio",
+					class: "time",
+					name: "mapTime",
+					value: function(d) {return d;}
+				})
+				.property("checked", function(d, i) {return i==0;})
+				.on('change', onchange);
+			
+			var form = d3.select("#legend")
+			
+			//slider
+			d3.select('#slider')
+			.on("input", onchange);
+			
+			//svg for linechart legend and map's associated line chart
+			var legend = d3.select("#legend")
+			.append("svg")
+			.attr("width", 370)
+			.attr("height", 630);
+			
+			buildLineChartLegend();
+			onchange();
+		}
+		
+		function buildLineChartLegend() {
+		
+		var margin = {top: 5, right: 5, bottom: 15, left: 22};
+			var svg = d3.select("#legend").select("svg")
+				
+			var width = +svg.attr("width") - margin.left - margin.right;
+			var height = +svg.attr("height") - margin.top - margin.bottom;
+			
+			//Month legend line chart
+			var yMonth = d3.scale.linear()
+			.range([height/2, 0]);
+			var yAxisMonth = d3.svg.axis()
+			.scale(yMonth)
+			.orient("left");
+			
+			yMonth.domain([0,100]);
+			
+			var xMonth = d3.scale.ordinal().rangePoints([0, width]);
+			xMonth.domain(orderedTime["month"]);
+			
+			xMonthLegend = xMonth;
+			yMonthLegend = yMonth;
+			
+			var xAxisMonth = d3.svg.axis().scale(xMonth)
+				.tickFormat("")
+				.orient("bottom");		
+			
+			var gMonth = svg.append("g")
+			.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+			.attr("id", "legendLineChartgMonth");
+			
+			gMonth.append("g")
+				.attr("class", "x axis")
+				.attr("id", "legendAxisXMonth")
+				.attr("width", width)
+				.attr("height", height/2)
+				.attr("transform", "translate(0," + (height/2) + ")")
+				.call(xAxisMonth);
+			
+			gMonth.append("g")
+			.attr("class", "y axis")
+			.attr("transform", "translate(0,0)")
+			.call(yAxisMonth)
+			
+			//entrée : dataPollution.Station[i].Polluant.currentPolluant.currentGranularity
+			var lineMonth = d3.svg.line()
+			.defined(function(d) { return !isNaN(d.value); })
+			.x(function(d) { return xMonth(d.date); })
+			.y(function(d) { return yMonth(d.value); })
+			 .interpolate("linear");
+		
+			lineLegendMonth = lineMonth;
+			
+			
+			//years legend chart
+			var yYears = d3.scale.linear()
+			.range([height/2, 0]);
+			var yAxisYears = d3.svg.axis()
+			.scale(yYears)
+			.orient("left");
+			
+			yYears.domain([0,100]);
+			
+			var xYears = d3.scale.ordinal().rangePoints([0, width]);
+			xYears.domain(orderedTime["years"]);
+			
+			xYearsLegend = xYears;
+			yYearsLegend = yYears;
+			
+			var xAxisYears = d3.svg.axis().scale(xYears)
+				.tickFormat("")
+				.orient("bottom");		
+			
+			var gYears = svg.append("g")
+			.attr("transform", "translate(" + margin.left + "," + (margin.top + height/2) + ")")
+			.attr("id", "legendLineChartgYears");
+			
+			gYears.append("g")
+				.attr("class", "x axis")
+				.attr("id", "legendAxisXYears")
+				.attr("width", width)
+				.attr("height", height/2)
+				.attr("transform", "translate(0," + (height/2) + ")")
+				.call(xAxisYears);
+			
+			gYears.append("g")
+			.attr("class", "y axis")
+			.attr("transform", "translate(0,0)")
+			.call(yAxisYears)
+			
+			//entrée : dataPollution.Station[i].Polluant.currentPolluant.currentGranularity
+			var lineYears = d3.svg.line()
+			.defined(function(d) { return !isNaN(d.value); })
+			.x(function(d) { return xYears(d.date); })
+			.y(function(d) { return yYears(d.value); })
+			 .interpolate("linear");
+		
+			lineLegendYears = lineYears;
+		}
+		
+		/*** Function call to draw the line chart in legend of the chat **/
+		function drawLineChartLegend(data) {
+			if(typeof data == "undefined") {
+				return;
+			}
+			currentStation = data;
+			
+			//Draw the Month line chart
+			var g = d3.select("#legendLineChartgMonth");
+			g.selectAll("#textStationLegend").remove();
+			g.append("text").html(data.name)
+			.attr("id", "textStationLegend")
+			.attr("x", "170")
+			.attr("dy", "10")
+			.style("text-anchor", "middle");
+			d3.selectAll(".stationLegendMonth").remove();
+			var station = g.selectAll(".stationLegendMonth")
+			.data([data])
+			
+			station.enter().append("g")
+				.attr("class", "stationLegendMonth");
+				
+			
+			station.append("path")
+			.attr("class", "line")
+			.attr("pointer-events", "none")
+			.attr("d", function(d) {
+				if(typeof d.Polluants[currentPolluant] != "undefined") {			
+					if(typeof d.Polluants[currentPolluant]["month"] != "undefined") {
+						var array = [];
+						var data = d.Polluants[currentPolluant]["month"];
+						for(v in data) {
+							array.push({"date":v, "value":Math.round(data[v])});
+						}
+						return lineLegendMonth(array);
+					}
+				}
+			 })
+			 if(currentGranularity == "month") {				
+				var circle = station.append("circle").data([data]);
+				
+				circle.attr("cx", function (d) { return xMonthLegend(orderedTime["month"][currentTime]); })
+				.attr("cy", function (d) { 
+					return yMonthLegend(getValuePolluant(d,currentPolluant,currentGranularity,currentTime));
+					})
+				.attr("r", 10)
+				.style("fill", "steelblue")
+				.on('mouseover', function(d) {
+					d3.select(this).style("fill-opacity",0.8);    
+					var mouse = [0, 0];
+					mouse = d3.mouse(this);
+					var text = currentPolluant + ": " + getValuePolluant(d, currentPolluant, currentGranularity, currentTime)
+						+ d.Polluants[currentPolluant].Unitée;
+					tooltip.classed('mapHidden', false)
+					.attr('style', 'left:' + (d3.event.pageX - 200) +
+						  'px; top:' + (d3.event.pageY - 55) + 'px')
+					.html("<div>" + d.name + "<\div>" + "<div>" + text + "<\div>");
+				})
+				.on('mouseout', function(d) {
+					tooltip.classed('mapHidden', true);
+					d3.select(this).style("fill-opacity",0.5);    
+				 });
+			 }
+			
+			//Draw the years line chart
+			g = d3.select("#legendLineChartgYears");
+			d3.selectAll(".stationLegendYears").remove();
+			station = g.selectAll(".stationLegendYears")
+			.data([data])
+			
+			station.enter().append("g")
+				.attr("class", "stationLegendYears");
+				
+			
+			station.append("path")
+			.attr("class", "line")
+			.attr("d", function(d) {
+				if(typeof d.Polluants[currentPolluant] != "undefined") {			
+					if(typeof d.Polluants[currentPolluant]["years"] != "undefined") {
+						var array = [];
+						var data = d.Polluants[currentPolluant]["years"];
+						for(v in data) {
+							array.push({"date":v, "value":Math.round(data[v])});
+						}
+						return lineLegendYears(array);
+					}
+				}
+			 })
+			 
+			 if(currentGranularity == "years") {
+			 	var circle = station.append("circle").data([data]);				
+				circle.attr("cx", function (d) { return xYearsLegend(orderedTime["years"][currentTime]); })
+				.attr("cy", function (d) { 
+					return yYearsLegend(getValuePolluant(d,currentPolluant,currentGranularity,currentTime));
+					})
+				.attr("r", 10)
+				.style("fill", "steelblue")
+				.on('mouseover', function(d) {
+					d3.select(this).style("fill-opacity",0.8);    
+					var mouse = [0, 0];
+					mouse = d3.mouse(this);
+					var text = currentPolluant + ": " + getValuePolluant(d, currentPolluant, currentGranularity, currentTime)
+						+ d.Polluants[currentPolluant].Unitée;
+					tooltip.classed('mapHidden', false)
+					.attr('style', 'left:' + (d3.event.pageX -200) +
+						  'px; top:' + (d3.event.pageY - 55) + 'px')
+					.html("<div>" + d.name + "<\div>" + "<div>" + text + "<\div>");
+				})
+				.on('mouseout', function(d) {
+					tooltip.classed('mapHidden', true);
+					d3.select(this).style("fill-opacity",0.5);    
+				 });
+			 }
+			 
+		}
+		
+		/**call each time something change **/
+		function onchange() {
+			selectValue = d3.select('select').property('value');
+			currentPolluant = selectValue;
+			currentGranularity  = d3.select('input[name="mapTime"]:checked').node().value;
+			
+			if(currentGranularity == "month") {
+				d3.select('#slider')
+				.attr("max", 11);
+			} else if(currentGranularity == "years") {
+				d3.select('#slider')
+				.attr("max", 4);
+			}
+			
+			
+			currentTime = d3.select('#slider').node().value;
+			d3.select("#time").html(orderedTime[currentGranularity][currentTime]);
+			
+			console.log("change triggered with time="+currentTime);
+			
+			drawCirclesMap();
+			drawLine();
+			drawLineChartLegend(currentStation);
+		};
+		
+		/** redraw lines of the principal linechart */
+		function drawLine() {
+			if(typeof xMainLine == "undefined") {
+				console.log("Warning : drawLine return");
+				return;
+			}
+			var station = d3.select("#linechartid").select("svg").selectAll(".station");
+			xMainLine.domain(orderedTime[currentGranularity]);
+			var xAxis = d3.svg.axis().scale(xMainLine)
+				.orient("bottom");	
+			
+			d3.select("#mainLineXAxis")
+			.call(xAxis);
+			
+			station.selectAll("path")
+			.attr("d", function(d) {
+				if(typeof d.Polluants[currentPolluant] != "undefined") {			
+					if(typeof d.Polluants[currentPolluant][currentGranularity] != "undefined") {
+						var array = [];
+						var data = d.Polluants[currentPolluant][currentGranularity];
+						for(v in data) {
+							array.push({"date":v, "value":Math.round(data[v])});
+						}
+						return lineMain(array);
+					}
+				}
+			 })
+			.attr("stroke-dasharray", function(d) {return d3.select(this).node().getTotalLength() + " " + d3.select(this).node().getTotalLength() })
+			.attr("stroke-dashoffset", function(d) {return d3.select(this).node().getTotalLength() })
+			.transition()
+			.duration(500)
+			.ease("linear")
+			.attr("stroke-dashoffset", 0);
+			
+
+			if(currentPolluant == "Particules_PM10") {
+				d3.select("#LineChartTreshold").style("visibility","visible")
+			} else {
+				d3.select("#LineChartTreshold").style("visibility","hidden")
+			}
+		}
+		
+		/**redraw circles on the map */
+		function drawCirclesMap() {
+			console.log("drawCirclesMap triggered");
+			var svg = d3.select("#contenu_onglet_map").select("svg"),
+			g = svg.select("g");			
+			var circles = g.selectAll("circle")
+				.data(dataPollution.Stations)
+				.attr("r", function (d) { 
+					console.log(currentPolluant);
+					return getValuePolluant(d,currentPolluant,currentGranularity,currentTime); 
+				})
+				.style("fill", function(d) { return "red"; })
+		}
+		
+		/**return the value of the polluant, 0 if doesn't exist (principaly used for circles rayon)*/
+		function getValuePolluant(d, polluant, granularity, time) {
+
+			if(typeof d.Polluants[polluant] == "undefined") {
+				return 0;
+			}else if(typeof d.Polluants[polluant][granularity] == "undefined") {
+				return 0;
+			} else if(isNaN(d.Polluants[polluant][granularity][orderedTime[granularity][time]])) {
+				return 0;
+			}
+				return Math.round(d.Polluants[polluant][granularity][orderedTime[granularity][time]] * 100) / 100 ;			
+		}
+		
+		/* test du polluant si on peut oui on non */
+		function estPolluantDL(polluant){
+			if(polluant == "Dioxyde_d'azote" || polluant == "Monoxyde_d'azote" || polluant == "Ozone")
+				return true;
+			return false;
+		}
+		/**********************************************************************************************/
+
+
+    </script>
+</body>
+</html>

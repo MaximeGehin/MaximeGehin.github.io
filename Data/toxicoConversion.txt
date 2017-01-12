@@ -1,0 +1,4 @@
+"polluant";"converter";"LC50"
+"Dioxyde_d'azote";"0.532";"87"
+"Monoxyde_d'azote";"0.82";"115"
+"Ozone";"0.473";"19.2"
